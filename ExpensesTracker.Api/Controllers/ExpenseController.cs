@@ -2,6 +2,7 @@
 using ExpenseTracker.Data;
 using ExpenseTracker.Model;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -23,7 +24,7 @@ namespace ExpensesTracker.Api.Controllers
         {
             return Ok(await _context.ExpenseDetails.ToListAsync());
         }
-        [HttpGet("{email}")]
+        [HttpGet("Email{email}")]
         public async Task<ActionResult> GetExpenseByEmail(string email)
         {
             if (email == null)
@@ -63,7 +64,7 @@ namespace ExpensesTracker.Api.Controllers
 
         //Post an expense
         [HttpPost]
-        public async Task<ActionResult> PostAnExpense(ExpenseDetails postExpense)
+        public async Task<ActionResult> PostAnExpense(ExpenseDto postExpense)
         {
             if (postExpense == null) 
                 return BadRequest();
@@ -85,7 +86,7 @@ namespace ExpensesTracker.Api.Controllers
 
         //Update expense record
         [HttpPut("{id:int}")]
-        public async Task<ActionResult> UpdateExpense(int id, ExpenseDetails putExpense)
+        public async Task<ActionResult> UpdateExpense(int id, ExpenseDto putExpense)
         {
             if (id == 0)
                 return BadRequest();
@@ -106,6 +107,22 @@ namespace ExpensesTracker.Api.Controllers
             }
         }
 
+        [HttpPatch("{id}")]
+        public async Task<ActionResult> UpdateReminderParts(int id, [FromBody] JsonPatchDocument<ExpenseDetail> patchExpense)
+        {
+            var expense = await _context.ExpenseDetails.FindAsync(id);
+            if (expense == null)
+            {
+                return NotFound(id);
+            }
+            patchExpense.ApplyTo(expense, ModelState);
+
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            await _context.SaveChangesAsync();
+            return Ok(expense);
+        }
         //Delete expense details
         [HttpDelete("{id:int}")]
         public async Task<ActionResult> DeleteExpenseById(int id)
